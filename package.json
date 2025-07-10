@@ -6,36 +6,41 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "@sap-cloud-sdk/http-client": "^4.0.2",
     "@sap/cds": "^9",
     "express": "^4"
   },
   "devDependencies": {
+    "@cap-js/cds-typer": ">=0.1",
+    "@cap-js/cds-types": "^0.11.0",
     "@cap-js/sqlite": "^2",
+    "@sap-cloud-sdk/resilience": "^4.0.2",
     "@sap/cds-dk": ">=8",
     "@types/node": "^24.0.12",
+    "tsx": "^4",
     "typescript": "^5"
   },
   "scripts": {
-    "start": "cds-serve"
+    "build": "tsc",
+    "start": "npm run build && node gen/srv/server.js"
   },
   "cds": {
-    "services": {
-      "SearchService": {
-        "impl": "srv/search-service.ts"
-      }
-    },
     "requires": {
       "auth": {
         "kind": "dummy"
       },
-      "google": {
-        "GoogleSearchAPI": {
-          "kind": "rest",
-          "credentials": {
-            "url": "https://www.googleapis.com/customsearch"
-          }
+      "GoogleSearchAPI": {
+        "kind": "rest",
+        "credentials": {
+          "url": "https://www.googleapis.com/customsearch"
         }
       }
     }
+  },
+  "imports": {
+    "#cds-models/*": "./@cds-models/*/index.js"
+  },
+  "server": {
+    "index": true
   }
 }

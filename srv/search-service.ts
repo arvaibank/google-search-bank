@@ -1,4 +1,4 @@
-import cds from '@sap/cds';
+import cds, { Service } from '@sap/cds';
 
 console.log("--- [DEBUG] srv/search-service.ts file has been loaded ---");
 
@@ -12,14 +12,10 @@ export class SearchService extends cds.ApplicationService {
     init() {
         console.log("--- [DEBUG] SearchService init() has been called ---");
 
-        // The 'on' handler is registered synchronously.
-        // The handler function itself is async, which is correct.
-        // By explicitly typing 'req' as 'cds.Request', we help the TypeScript
-        // compiler choose the correct overload for the '.on()' method.
         this.on('getSearchResults', async (req: cds.Request) => {
             console.log("--- [DEBUG] 'getSearchResults' handler has been triggered! ---");
             
-            const googleApi = await cds.connect.to('google.GoogleSearchAPI');
+            const googleApi = await cds.connect.to('GoogleSearchAPI');
             const { keyword, excludedDomains } = req.data;
 
             if (!keyword) return req.error(400, 'A search keyword is required.');
@@ -34,8 +30,8 @@ export class SearchService extends cds.ApplicationService {
 
             let finalQuery = keyword;
             if (excludedDomains) {
-                const domains = excludedDomains.split(',').map(d => d.trim()).filter(d => d);
-                const exclusionString = domains.map(domain => `-site:${domain}`).join(' ');
+                const domains = excludedDomains.split(',').map((d: string) => d.trim()).filter((d: any) => d);
+                const exclusionString = domains.map((domain: any) => `-site:${domain}`).join(' ');
                 finalQuery = `${keyword} ${exclusionString}`;
             }
 
@@ -46,14 +42,13 @@ export class SearchService extends cds.ApplicationService {
                 const externalResponse = await googleApi.get(queryPath);
                 const items = externalResponse.items || [];
                 console.log(`--- [INFO] Found ${items.length} items from Google API.`);
-                return items.map(item => ({ title: item.title, link: item.link, snippet: item.snippet }));
+                return items.map((item: { title: any; link: any; snippet: any; }) => ({ title: item.title, link: item.link, snippet: item.snippet }));
             } catch (error: any) {
                 console.error('--- [ERROR] Error calling Google Search API: ---', error.message);
                 return req.error(502, 'Failed to retrieve search results.');
             }
         });
 
-        // The init method itself is synchronous and must return super.init().
         return super.init();
     }
 }
