@@ -1,0 +1,41 @@
+{
+  "name": "google-search-bank",
+  "version": "1.0.0",
+  "description": "A CAP project for Google Search",
+  "repository": "<Add your repository here>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@sap/cds": "^9",
+    "express": "^4"
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^2",
+    "@sap/cds-dk": ">=8",
+    "@types/node": "^24.0.12",
+    "typescript": "^5"
+  },
+  "scripts": {
+    "start": "cds-serve"
+  },
+  "cds": {
+    "services": {
+      "SearchService": {
+        "impl": "srv/search-service.ts"
+      }
+    },
+    "requires": {
+      "auth": {
+        "kind": "dummy"
+      },
+      "google": {
+        "GoogleSearchAPI": {
+          "kind": "rest",
+          "credentials": {
+            "url": "https://www.googleapis.com/customsearch"
+          }
+        }
+      }
+    }
+  }
+}
