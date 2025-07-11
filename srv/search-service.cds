@@ -1,3 +1,5 @@
+using { com.sap.search as my } from '../db/data-model';
+
 service SearchService {
 
     type SearchResult {
@@ -11,4 +13,5 @@ service SearchService {
         excludedDomains  : String default ''
     ) returns array of SearchResult;
 
+    entity SearchTerms as projection on my.SearchTerm;
 }
