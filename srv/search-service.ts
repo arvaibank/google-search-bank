@@ -49,6 +49,43 @@ export class SearchService extends cds.ApplicationService {
             }
         });
 
+        this.on('saveKeywords', async (req: cds.Request) => {
+            console.log("--- [HANDLER] 'saveKeywords' handler has been triggered! ---");
+            
+            const { keywords } = req.data;
+
+            if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+                return req.error(400, 'Request must contain a non-empty array of keywords.');
+            }
+
+            console.log(`--- [INFO] Received ${keywords.length} keywords to save.`);
+
+            const { SearchTerms } = this.entities;
+
+            const entriesToInsert = keywords.map((item: any) => ({
+                keyword: item.keyword,
+                excludedDomains: item.excludedDomains,
+                status: 'Pending'
+            }));
+
+            await INSERT.into(SearchTerms).entries(entriesToInsert);
+
+            const messaging = await cds.connect.to('messaging').catch(() => {
+                console.warn("--- [WARN] Messaging service not connected. Skipping event emission. ---");
+                return null;
+            });
+
+            if (messaging) {
+                await messaging.emit('search/keywords/saved', { count: entriesToInsert.length });
+                console.log(`--- [INFO] Emitted 'search/keywords/saved' event for ${entriesToInsert.length} items.`);
+            }
+
+            return {
+                message: `Successfully received and saved ${entriesToInsert.length} search terms.`,
+                count: entriesToInsert.length
+            };
+        });
+
         return super.init();
     }
 }
