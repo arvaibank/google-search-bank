@@ -1,6 +1,11 @@
+/*
+
 import cds, { Service } from '@sap/cds';
 
 console.log("--- [DEBUG] srv/search-service.ts file has been loaded ---");
+
+const MAX_RESULTS_PER_PAGE = 10;
+const MAX_PAGES = 5;
 
 interface GoogleSearchResultItem {
     title: string;
@@ -9,7 +14,7 @@ interface GoogleSearchResultItem {
 }
 
 export class SearchService extends cds.ApplicationService {
-    init() {
+    async init() {
         console.log("--- [DEBUG] SearchService init() has been called ---");
 
         this.on('getSearchResults', async (req: cds.Request) => {
@@ -35,57 +40,43 @@ export class SearchService extends cds.ApplicationService {
                 finalQuery = `${keyword} ${exclusionString}`;
             }
 
-            const queryPath = `/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(finalQuery)}&num=10`;
-            console.log(`--- [INFO] Executing search with path: ${queryPath} ---`);
+            const allItems: GoogleSearchResultItem[] = [];
+            let retries = 3;
 
-            try {
-                const externalResponse = await googleApi.get(queryPath);
-                const items = externalResponse.items || [];
-                console.log(`--- [INFO] Found ${items.length} items from Google API.`);
-                return items.map((item: { title: any; link: any; snippet: any; }) => ({ title: item.title, link: item.link, snippet: item.snippet }));
-            } catch (error: any) {
-                console.error('--- [ERROR] Error calling Google Search API: ---', error.message);
-                return req.error(502, 'Failed to retrieve search results.');
+            for (let page = 0; page < MAX_PAGES; page++) {
+                const start = page * MAX_RESULTS_PER_PAGE + 1;
+                const queryPath = `/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(finalQuery)}&num=${MAX_RESULTS_PER_PAGE}&start=${start}`;
+                console.log(`--- [INFO] Executing search with path: ${queryPath} ---`);
+
+                try {
+                    const externalResponse = await googleApi.get(queryPath);
+                    const items = externalResponse.items || [];
+                    console.log(`--- [INFO] Found ${items.length} items from Google API on page ${page + 1}.`);
+                    
+                    if (items.length === 0) {
+                        break;
+                    }
+
+                    allItems.push(...items.map((item: { title: any; link: any; snippet: any; }) => ({ title: item.title, link: item.link, snippet: item.snippet })));
+                } catch (error: any) {
+                    console.error('--- [ERROR] Error calling Google Search API: ---', error.message);
+                    if (retries > 0) {
+                        retries--;
+                        page--;
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        continue;
+                    }
+                    return req.error(502, 'Failed to retrieve search results after multiple retries.');
+                }
             }
-        });
-
-        this.on('saveKeywords', async (req: cds.Request) => {
-            console.log("--- [HANDLER] 'saveKeywords' handler has been triggered! ---");
             
-            const { keywords } = req.data;
-
-            if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
-                return req.error(400, 'Request must contain a non-empty array of keywords.');
-            }
-
-            console.log(`--- [INFO] Received ${keywords.length} keywords to save.`);
-
-            const { SearchTerms } = this.entities;
-
-            const entriesToInsert = keywords.map((item: any) => ({
-                keyword: item.keyword,
-                excludedDomains: item.excludedDomains,
-                status: 'Pending'
-            }));
-
-            await INSERT.into(SearchTerms).entries(entriesToInsert);
-
-            const messaging = await cds.connect.to('messaging').catch(() => {
-                console.warn("--- [WARN] Messaging service not connected. Skipping event emission. ---");
-                return null;
-            });
-
-            if (messaging) {
-                await messaging.emit('search/keywords/saved', { count: entriesToInsert.length });
-                console.log(`--- [INFO] Emitted 'search/keywords/saved' event for ${entriesToInsert.length} items.`);
-            }
-
-            return {
-                message: `Successfully received and saved ${entriesToInsert.length} search terms.`,
-                count: entriesToInsert.length
-            };
+            console.log(`--- [INFO] Total items found: ${allItems.length}`);
+            return allItems;
         });
 
         return super.init();
     }
 }
+
+
+*/
