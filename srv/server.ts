@@ -6,6 +6,17 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 
+// This is a utility function to get the full request body as a buffer
+function getRequestBodyBuffer(req: Request): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+        const chunks: any[] = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', () => resolve(Buffer.concat(chunks)));
+        req.on('error', err => reject(err));
+    });
+}
+
+
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'reports');
 if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -77,57 +88,65 @@ async function parseFileBuffer(buffer: Buffer): Promise<{ keyword: string; exclu
 }
 
 async function handleFileUpload(req: Request, res: Response) {
-    const chunks: any[] = [];
-    req.on('data', chunk => chunks.push(chunk));
-    req.on('error', (err) => res.status(500).send('An error occurred during file upload.'));
-    req.on('end', async () => {
-        let runID: string | null = null;
-        try {
-            const buffer = Buffer.concat(chunks);
-            if (buffer.length === 0) return res.status(400).send('File is missing or empty.');
+    console.log('--- [SERVER LOG] File upload request received.');
+    
+    const tx = cds.tx();
+    const { SearchRun } = cds.entities('com.sap.search');
+    let runID: string | null = null;
 
-            const parsedData = await parseFileBuffer(buffer);
-            const { SearchRun } = cds.entities('com.sap.search');
-            
-            console.log('--- [DB LOG] Attempting to create SearchRun record...');
-            const run = await INSERT.into(SearchRun).entries({
-                fileName: req.headers['x-filename'] || 'unknown.xlsx',
+    try {
+        const buffer = await getRequestBodyBuffer(req);
+        if (buffer.length === 0) return res.status(400).send('File is missing or empty.');
+        console.log('--- [SERVER LOG] File buffer received successfully.');
+
+        const parsedData = await parseFileBuffer(buffer);
+        console.log(`--- [SERVER LOG] Successfully parsed ${parsedData.length} entries.`);
+        
+        const newRunID = cds.utils.uuid();
+        runID = newRunID;
+        
+        await tx.run(
+            INSERT.into(SearchRun).entries({
+                ID: runID,
+                fileName: req.headers['x-filename'] as string || 'unknown.xlsx',
                 keywordCount: parsedData.length,
                 status: 'Processing'
-            });
-            runID = run.results[0].ID;
-            console.log(`--- [DB LOG] Successfully created SearchRun with ID: ${runID}`);
+            })
+        );
+        console.log(`--- [DB LOG] Successfully created SearchRun with ID: ${runID}`);
 
-            const excelBuffer = await callCpiIFlow({ keywords: parsedData });
+        const excelBuffer = await callCpiIFlow({ keywords: parsedData });
+        console.log('--- [SERVER LOG] Successfully received Excel file from CPI.');
 
-            const timestamp = new Date().toISOString().replace(/:/g, '-');
-            const fileName = `Report-${runID}-${timestamp}.xlsx`;
-            const filePath = path.join(UPLOAD_DIR, fileName);
-            fs.writeFileSync(filePath, excelBuffer);
-            
-            console.log(`--- [DB LOG] Attempting to update SearchRun ${runID} to 'Success'...`);
-            await UPDATE(SearchRun, runID).with({
+        const timestamp = new Date().toISOString().replace(/:/g, '-');
+        const fileName = `Report-${runID}-${timestamp}.xlsx`;
+        const filePath = path.join(UPLOAD_DIR, fileName);
+        fs.writeFileSync(filePath, excelBuffer);
+        
+        await tx.run(
+            UPDATE(SearchRun, runID).with({
                 status: 'Success',
                 reportUrl: `/rest/download/${fileName}`
-            });
-            console.log(`--- [DB LOG] Successfully updated SearchRun ${runID}.`);
+            })
+        );
+        console.log(`--- [DB LOG] Successfully updated SearchRun ${runID} to 'Success'.`);
 
-            return res.status(200).json({
-                message: `Successfully processed ${parsedData.length} keywords.`,
-                downloadUrl: `/rest/download/${fileName}`
-            });
+        await tx.commit();
 
-        } catch (error: any) {
-            console.error('--- [Upload Error] ---', error.message);
-            if (runID) {
-                console.log(`--- [DB LOG] Attempting to update SearchRun ${runID} to 'Failed'...`);
-                const { SearchRun } = cds.entities('com.sap.search');
-                await UPDATE(SearchRun, runID).with({ status: 'Failed' });
-                console.log(`--- [DB LOG] Successfully updated SearchRun ${runID} to 'Failed'.`);
-            }
-            return res.status(500).send(`An error occurred: ${error.message}`);
+        return res.status(200).json({
+            message: `Successfully processed ${parsedData.length} keywords.`,
+            downloadUrl: `/rest/download/${fileName}`
+        });
+
+    } catch (error: any) {
+        console.error('--- [FATAL UPLOAD ERROR] ---', error.message);
+        if (tx.isDraft) await tx.rollback();
+
+        if (runID) {
+            console.log(`--- [DB LOG] Transaction rolled back for run ID: ${runID}.`);
         }
-    });
+        return res.status(500).send(`An error occurred: ${error.message}`);
+    }
 }
 
 cds.on('bootstrap', (app) => {

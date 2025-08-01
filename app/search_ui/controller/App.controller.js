@@ -1,13 +1,13 @@
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
-    "sap/ui/unified/FileUploaderParameter", // <-- ADD THIS IMPORT
+    "sap/ui/unified/FileUploaderParameter",
     "sap/m/MessageBox",
     "sap/m/Dialog",
     "sap/m/Button",
     "sap/m/Link",
     "sap/m/Text",
     "sap/m/VBox"
-], function (Controller, FileUploaderParameter, MessageBox, Dialog, Button, Link, Text, VBox) { // <-- ADD IT HERE
+], function (Controller, FileUploaderParameter, MessageBox, Dialog, Button, Link, Text, VBox) {
     "use strict";
 
     return Controller.extend("com.sap.searchui.controller.App", {
@@ -34,11 +34,8 @@ sap.ui.define([
                 return;
             }
 
-            // The backend now needs the filename. We add it as a request header.
-            oFileUploader.removeAllHeaderParameters();
+            oFileUploader.removeAllHeaderParameters(); 
             var sFileName = oFileUploader.getValue();
-            
-            // --- THIS IS THE CORRECTED LINE ---
             var oHeaderParameter = new FileUploaderParameter({
                 name: "x-filename",
                 value: sFileName
