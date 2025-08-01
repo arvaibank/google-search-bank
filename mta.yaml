@@ -28,8 +28,6 @@ resources:
       service-plan: application
       path: ./xs-security.json
       config:
-        # FIX: Using a static, valid name instead of dynamic variables
-        # to avoid invalid characters from the org/space name.
         xsappname: google-search-bank-app
         tenant-mode: dedicated
   
@@ -37,7 +35,4 @@ resources:
     type: org.cloudfoundry.managed-service
     parameters:
       service: postgresql-db
-      # FIX: Changed service plan to 'free'. This is the standard plan for
-      # free-tier/trial accounts. If this fails, run 'cf marketplace -s postgresql-db'
-      # in your terminal to see the available plan names and update this value.
       service-plan: free

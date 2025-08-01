@@ -1,10 +1,21 @@
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
-    "sap/m/MessageBox"
-], function (Controller, MessageBox) {
+    "sap/ui/unified/FileUploaderParameter", // <-- ADD THIS IMPORT
+    "sap/m/MessageBox",
+    "sap/m/Dialog",
+    "sap/m/Button",
+    "sap/m/Link",
+    "sap/m/Text",
+    "sap/m/VBox"
+], function (Controller, FileUploaderParameter, MessageBox, Dialog, Button, Link, Text, VBox) { // <-- ADD IT HERE
     "use strict";
 
     return Controller.extend("com.sap.searchui.controller.App", {
+        
+        onNavToHistory: function() {
+            this.getOwnerComponent().getRouter().navTo("History");
+        },
+
         onFileChange: function(oEvent) {
             var oFileUploader = this.byId("fileUploader");
             var oButton = this.byId("uploadButton");
@@ -23,6 +34,17 @@ sap.ui.define([
                 return;
             }
 
+            // The backend now needs the filename. We add it as a request header.
+            oFileUploader.removeAllHeaderParameters();
+            var sFileName = oFileUploader.getValue();
+            
+            // --- THIS IS THE CORRECTED LINE ---
+            var oHeaderParameter = new FileUploaderParameter({
+                name: "x-filename",
+                value: sFileName
+            });
+            oFileUploader.addHeaderParameter(oHeaderParameter);
+
             oFileUploader.upload();
         },
 
@@ -34,8 +56,42 @@ sap.ui.define([
             oFileUploader.clear();
             this.byId("uploadButton").setEnabled(false);
 
-            if (iStatus === 202) {
-                MessageBox.success("File successfully submitted for processing. Response: " + sResponse);
+            if (iStatus === 200 && sResponse) { 
+                try {
+                    const oData = JSON.parse(sResponse);
+                    
+                    const oSuccessDialog = new Dialog({
+                        title: "Success",
+                        type: "Message",
+                        state: "Success",
+                        content: new VBox({
+                            items: [
+                                new Text({ text: oData.message }),
+                                new Link({
+                                    text: "Click here to download your report",
+                                    href: oData.downloadUrl,
+                                    target: "_blank", 
+                                    class: "sapUiSmallMarginTop"
+                                })
+                            ]
+                        }),
+                        beginButton: new Button({
+                            text: "Close",
+                            press: function () {
+                                oSuccessDialog.close();
+                            }
+                        }),
+                        afterClose: function() {
+                            oSuccessDialog.destroy();
+                        }
+                    });
+
+                    oSuccessDialog.open();
+
+                } catch (e) {
+                     MessageBox.error("An error occurred while parsing the server response.");
+                }
+
             } else {
                 MessageBox.error("File upload failed.\n\nStatus: " + iStatus + "\nResponse: " + sResponse);
             }

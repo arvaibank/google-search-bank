@@ -5,9 +5,12 @@
     xmlns:u="sap.ui.unified"
     displayBlock="true">
     <Shell>
-        <App>
+        <App id="app">
             <pages>
                 <Page title="{i18n>title}">
+                    <headerContent>
+                        <Button icon="sap-icon://history" press="onNavToHistory" tooltip="View Run History"/>
+                    </headerContent>
                     <content>
                         <VBox class="sapUiSmallMargin">
                             <Title text="Keyword File Uploader" class="sapUiSmallMarginBottom"/>

@@ -1,0 +1,41 @@
+<mvc:View
+    controllerName="com.sap.searchui.controller.History"
+    xmlns="sap.m"
+    xmlns:mvc="sap.ui.core.mvc">
+    <Page title="Run History" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <Table
+                id="historyTable"
+                inset="false"
+                items="{/SearchRuns}">
+                <headerToolbar>
+                    <Toolbar>
+                        <Title text="Past Keyword Analysis Runs"/>
+                        <ToolbarSpacer/>
+                        <Button icon="sap-icon://refresh" press="onRefresh"/>
+                    </Toolbar>
+                </headerToolbar>
+                <columns>
+                    <Column><Text text="File Name"/></Column>
+                    <Column><Text text="Keywords"/></Column>
+                    <Column><Text text="Status"/></Column>
+                    <Column><Text text="Run Date"/></Column>
+                    <Column><Text text="Report"/></Column>
+                </columns>
+                <items>
+                    <ColumnListItem vAlign="Middle">
+                        <cells>
+                            <Text text="{fileName}"/>
+                            <Text text="{keywordCount}"/>
+                            <ObjectStatus
+                                text="{status}"
+                                state="{= ${status} === 'Success' ? 'Success' : ${status} === 'Failed' ? 'Error' : 'Warning' }"/>
+                            <Text text="{path: 'createdAt', type: 'sap.ui.model.type.DateTime', formatOptions: { style: 'medium' }}"/>
+                            <Link text="Download" href="{reportUrl}" visible="{= !!${reportUrl} }"/>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </content>
+    </Page>
+</mvc:View>

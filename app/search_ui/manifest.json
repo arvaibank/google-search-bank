@@ -8,6 +8,15 @@
 		"description": "{{appDescription}}",
 		"applicationVersion": {
 			"version": "1.0.0"
+		},
+		"dataSources": {
+			"mainService": {
+				"uri": "/service/SearchService/",
+				"type": "OData",
+				"settings": {
+					"odataVersion": "4.0"
+				}
+			}
 		}
 	},
 	"sap.ui": {
@@ -29,7 +38,7 @@
 			"minUI5Version": "1.60",
 			"libs": {
 				"sap.m": {},
-                "sap.ui.unified": {}
+				"sap.ui.unified": {}
 			}
 		},
 		"contentDensities": {
@@ -41,6 +50,46 @@
 				"type": "sap.ui.model.resource.ResourceModel",
 				"settings": {
 					"bundleName": "com.sap.searchui.i18n.i18n"
+				}
+			},
+			"": {
+				"dataSource": "mainService",
+				"preload": true,
+				"settings": {
+					"synchronizationMode": "None",
+					"operationMode": "Server",
+					"autoExpandSelect": true,
+					"earlyRequests": true
+				}
+			}
+		},
+		"routing": {
+			"config": {
+				"routerClass": "sap.m.routing.Router",
+				"viewType": "XML",
+				"async": true,
+				"viewPath": "com.sap.searchui.view",
+				"controlAggregation": "pages",
+				"controlId": "app",
+				"clearControlAggregation": false
+			},
+			"routes": [{
+				"name": "RouteApp",
+				"pattern": "",
+				"target": ["TargetApp"]
+			}, {
+				"name": "History",
+				"pattern": "history",
+				"target": ["TargetHistory"]
+			}],
+			"targets": {
+				"TargetApp": {
+					"viewType": "XML",
+					"viewName": "App"
+				},
+				"TargetHistory": {
+					"viewType": "XML",
+					"viewName": "History"
 				}
 			}
 		}
