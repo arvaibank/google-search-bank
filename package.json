@@ -6,7 +6,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@sap-cloud-sdk/connectivity": "^4.1.1",
+    "@sap-cloud-sdk/connectivity": "^3.26.4",
     "@sap-cloud-sdk/http-client": "^4.0.2",
     "@sap/cds": "^9",
     "axios": "^1.6.0",
@@ -32,7 +32,7 @@
   "cds": {
     "requires": {
       "auth": {
-        "kind": "dummy"
+        "kind": "xsuaa"
       },
       "db": {
         "kind": "sqlite",

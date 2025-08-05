@@ -1,10 +1,12 @@
 using { com.sap.search as my } from '../db/data-model';
 
-@(requires: 'authenticated-user')
+@(restrict: [{ grant: '*', to: '*' }])
 service SearchService {
 
     @readonly
     entity SearchRuns as projection on my.SearchRun;
+
+    entity TestData as projection on my.TestData;
 
     type SearchResult {
         title   : String;
@@ -25,5 +27,4 @@ service SearchService {
     action saveKeywords(keywords: array of KeywordEntry);
 
     entity SearchTerms as projection on my.SearchTerm;
-
 }

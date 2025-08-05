@@ -7,7 +7,6 @@ import fs from 'fs';
 import path from 'path';
 import { getDestination } from '@sap-cloud-sdk/connectivity';
 
-
 function getRequestBodyBuffer(req: Request): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         const chunks: any[] = [];
@@ -24,16 +23,16 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 
 async function callCpiIFlow(payload: any) {
     console.log('--- [CPI LOG] Attempting to get destination "CPI_Google Search_iFlow"...');
-    const destination = await getDestination({ destinationName: 'CPI_Google_Search_iFlow_Bank' });
+    const destination = await getDestination({ destinationName: 'CPI_Google Search_iFlow' });
     if (!destination) {
-        throw new Error('BTP Destination "CPI_Google_Search_iFlow_Bank" not found.');
+        throw new Error('BTP Destination "CPI_Google Search_iFlow" not found.');
     }
     console.log('--- [CPI LOG] Successfully retrieved destination.');
 
     const iFlowEndpoint = destination.url + '/http/https/GoogleSearchJob';
-    
+
     console.log(`--- [CPI LOG] Sending ${payload.keywords.length} items to CPI endpoint: ${iFlowEndpoint}`);
-    
+
     const response = await axios.post(iFlowEndpoint, payload, {
         headers: {
             'Authorization': `Bearer ${destination.authTokens[0].value}`,
@@ -43,13 +42,8 @@ async function callCpiIFlow(payload: any) {
     });
 
     console.log(`--- [CPI LOG] Received response from CPI. Status: ${response.status}`);
-    console.log(`--- [CPI LOG] Response Headers:`, JSON.stringify(response.headers, null, 2));
-    console.log(`--- [CPI LOG] Response data type: ${typeof response.data}`);
-    console.log(`--- [CPI LOG] Response data length (bytes): ${response.data ? response.data.length : 'N/A'}`);
-
     return response.data;
 }
-
 
 async function parseFileBuffer(buffer: Buffer): Promise<{ keyword: string; excludedDomains: string; }[]> {
     let parsedData: { keyword: string; excludedDomains: string; }[] = [];
@@ -85,8 +79,6 @@ async function parseFileBuffer(buffer: Buffer): Promise<{ keyword: string; exclu
 }
 
 async function handleFileUpload(req: Request, res: Response) {
-    console.log('--- [SERVER LOG] File upload request received.');
-    
     const tx = cds.tx();
     const { SearchRun } = cds.entities('com.sap.search');
     let runID: string | null = null;
@@ -94,10 +86,8 @@ async function handleFileUpload(req: Request, res: Response) {
     try {
         const buffer = await getRequestBodyBuffer(req);
         if (buffer.length === 0) return res.status(400).send('File is missing or empty.');
-        console.log('--- [SERVER LOG] File buffer received successfully.');
 
         const parsedData = await parseFileBuffer(buffer);
-        console.log(`--- [SERVER LOG] Successfully parsed ${parsedData.length} entries.`);
         
         const newRunID = cds.utils.uuid();
         runID = newRunID;
@@ -110,10 +100,9 @@ async function handleFileUpload(req: Request, res: Response) {
                 status: 'Processing'
             })
         );
-        console.log(`--- [DB LOG] Successfully created SearchRun with ID: ${runID}`);
-
+        
         const excelBuffer = await callCpiIFlow({ keywords: parsedData });
-
+        
         if (!excelBuffer || excelBuffer.length < 100) {
              throw new Error(`Received an invalid or empty buffer from CPI. Size: ${excelBuffer ? excelBuffer.length : 0} bytes.`);
         }
@@ -129,11 +118,9 @@ async function handleFileUpload(req: Request, res: Response) {
                 reportUrl: `/rest/download/${fileName}`
             })
         );
-        console.log(`--- [DB LOG] Successfully updated SearchRun ${runID} to 'Success'.`);
-
-        await tx.commit();
-        console.log(`--- [DB LOG] Transaction committed for SearchRun ID: ${runID}.`);
         
+        await tx.commit();
+
         return res.status(200).json({
             message: `Successfully processed ${parsedData.length} keywords.`,
             downloadUrl: `/rest/download/${fileName}`
@@ -151,7 +138,6 @@ async function handleFileUpload(req: Request, res: Response) {
 }
 
 cds.on('bootstrap', (app) => {
-    console.log('--- [Bootstrap] Adding custom file upload and download endpoints. ---');
     app.post('/rest/upload', handleFileUpload);
     app.get('/rest/download/:filename', (req, res) => {
         const { filename } = req.params;

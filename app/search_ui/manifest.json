@@ -6,26 +6,18 @@
 		"i18n": "i18n/i18n.properties",
 		"title": "{{appTitle}}",
 		"description": "{{appDescription}}",
-		"applicationVersion": {
-			"version": "1.0.0"
-		},
+		"applicationVersion": { "version": "1.0.0" },
 		"dataSources": {
 			"mainService": {
-				"uri": "/service/SearchService/",
+				"uri": "/odata/v4/search/",
 				"type": "OData",
-				"settings": {
-					"odataVersion": "4.0"
-				}
+				"settings": { "odataVersion": "4.0" }
 			}
 		}
 	},
 	"sap.ui": {
 		"technology": "UI5",
-		"deviceTypes": {
-			"desktop": true,
-			"tablet": true,
-			"phone": true
-		}
+		"deviceTypes": { "desktop": true, "tablet": true, "phone": true }
 	},
 	"sap.ui5": {
 		"rootView": {
@@ -36,21 +28,13 @@
 		},
 		"dependencies": {
 			"minUI5Version": "1.60",
-			"libs": {
-				"sap.m": {},
-				"sap.ui.unified": {}
-			}
+			"libs": { "sap.m": {}, "sap.ui.unified": {} }
 		},
-		"contentDensities": {
-			"compact": true,
-			"cozy": true
-		},
+		"contentDensities": { "compact": true, "cozy": true },
 		"models": {
 			"i18n": {
 				"type": "sap.ui.model.resource.ResourceModel",
-				"settings": {
-					"bundleName": "com.sap.searchui.i18n.i18n"
-				}
+				"settings": { "bundleName": "com.sap.searchui.i18n.i18n" }
 			},
 			"": {
 				"dataSource": "mainService",
@@ -74,18 +58,18 @@
 				"clearControlAggregation": false
 			},
 			"routes": [{
-				"name": "RouteApp",
+				"name": "Upload",
 				"pattern": "",
-				"target": ["TargetApp"]
+				"target": ["TargetUpload"]
 			}, {
 				"name": "History",
 				"pattern": "history",
 				"target": ["TargetHistory"]
 			}],
 			"targets": {
-				"TargetApp": {
+				"TargetUpload": {
 					"viewType": "XML",
-					"viewName": "App"
+					"viewName": "Upload"
 				},
 				"TargetHistory": {
 					"viewType": "XML",

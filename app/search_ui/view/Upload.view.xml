@@ -1,0 +1,33 @@
+<mvc:View
+    controllerName="com.sap.searchui.controller.Upload"
+    xmlns="sap.m"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:u="sap.ui.unified">
+    <Page title="{i18n>title}">
+        <headerContent>
+            <Button icon="sap-icon://history" press="onNavToHistory" tooltip="View Run History"/>
+        </headerContent>
+        <content>
+            <VBox class="sapUiSmallMargin">
+                <Title text="Keyword File Uploader" class="sapUiSmallMarginBottom"/>
+                <u:FileUploader
+                    id="fileUploader"
+                    name="myFileUpload"
+                    uploadUrl="/rest/upload"
+                    tooltip="Upload your .csv or .xlsx file with keywords"
+                    fileType="csv,xlsx"
+                    sendXHR="true"
+                    useMultipart="false"
+                    placeholder="Choose a file..."
+                    change="onFileChange"
+                    uploadComplete="onUploadComplete"/>
+                <Button
+                    id="uploadButton"
+                    text="Upload and Process"
+                    press="onUploadPress"
+                    enabled="false"
+                    class="sapUiSmallMarginTop"/>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

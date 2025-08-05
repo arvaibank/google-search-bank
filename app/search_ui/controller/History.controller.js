@@ -3,16 +3,20 @@ sap.ui.define([
 ], function (Controller) {
     "use strict";
     return Controller.extend("com.sap.searchui.controller.History", {
-        onNavBack: function () {
-            var oHistory = sap.ui.core.routing.History.getInstance();
-            var sPreviousHash = oHistory.getPreviousHash();
-            if (sPreviousHash !== undefined) {
-                window.history.go(-1);
-            } else {
-                var oRouter = this.getOwnerComponent().getRouter();
-                oRouter.navTo("RouteApp", {}, true);
-            }
+        
+        onInit: function () {
+            var oRouter = this.getOwnerComponent().getRouter();
+            oRouter.getRoute("History").attachPatternMatched(this._onObjectMatched, this);
         },
+
+        _onObjectMatched: function () {
+            this.byId("historyTable").getBinding("items").refresh();
+        },
+
+        onNavBack: function () {
+            this.getOwnerComponent().getRouter().navTo("Upload", {}, true);
+        },
+
         onRefresh: function () {
             this.byId("historyTable").getBinding("items").refresh();
         }

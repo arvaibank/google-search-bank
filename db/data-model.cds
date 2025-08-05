@@ -17,3 +17,9 @@ entity SearchTerm : cuid, managed {
     status          : String(20) default 'Pending';
     run             : Association to SearchRun;
 }
+
+// Add this entity for testing purposes
+entity TestData : cuid {
+    key ID   : UUID;
+    message  : String;
+}

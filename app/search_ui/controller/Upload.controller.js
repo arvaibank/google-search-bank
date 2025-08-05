@@ -10,21 +10,15 @@ sap.ui.define([
 ], function (Controller, FileUploaderParameter, MessageBox, Dialog, Button, Link, Text, VBox) {
     "use strict";
 
-    return Controller.extend("com.sap.searchui.controller.App", {
+    return Controller.extend("com.sap.searchui.controller.Upload", {
         
         onNavToHistory: function() {
             this.getOwnerComponent().getRouter().navTo("History");
         },
 
         onFileChange: function(oEvent) {
-            var oFileUploader = this.byId("fileUploader");
-            var oButton = this.byId("uploadButton");
-
-            if (oFileUploader.getValue()) {
-                oButton.setEnabled(true);
-            } else {
-                oButton.setEnabled(false);
-            }
+            this.byId("fileUploader").setEnabled(true);
+            this.byId("uploadButton").setEnabled(true);
         },
 
         onUploadPress: function () {
@@ -33,15 +27,15 @@ sap.ui.define([
                 MessageBox.error("Please choose a file first.");
                 return;
             }
-
+            
             oFileUploader.removeAllHeaderParameters();
             var sFileName = oFileUploader.getValue();
-            var oHeaderParameter = new FileUploaderParameter({
-                name: "x-filename",
-                value: sFileName
-            });
+            var oHeaderParameter = new FileUploaderParameter({ name: "x-filename", value: sFileName });
             oFileUploader.addHeaderParameter(oHeaderParameter);
 
+            oFileUploader.setEnabled(false);
+            this.byId("uploadButton").setEnabled(false);
+            
             oFileUploader.upload();
         },
 
@@ -51,7 +45,7 @@ sap.ui.define([
             var iStatus = oEvent.getParameter("status");
 
             oFileUploader.clear();
-            this.byId("uploadButton").setEnabled(false);
+            oFileUploader.setEnabled(true);
 
             if (iStatus === 200 && sResponse) { 
                 try {
@@ -74,21 +68,19 @@ sap.ui.define([
                         }),
                         beginButton: new Button({
                             text: "Close",
-                            press: function () {
+                            press: () => {
                                 oSuccessDialog.close();
+                                this.getOwnerComponent().getRouter().navTo("History");
                             }
                         }),
-                        afterClose: function() {
+                        afterClose: () => {
                             oSuccessDialog.destroy();
                         }
                     });
-
                     oSuccessDialog.open();
-
                 } catch (e) {
                      MessageBox.error("An error occurred while parsing the server response.");
                 }
-
             } else {
                 MessageBox.error("File upload failed.\n\nStatus: " + iStatus + "\nResponse: " + sResponse);
             }
