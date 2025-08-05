@@ -5,8 +5,9 @@ import * as XLSX from 'xlsx';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import { getDestination } from '@sap-cloud-sdk/connectivity';
 
-// This is a utility function to get the full request body as a buffer
+
 function getRequestBodyBuffer(req: Request): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         const chunks: any[] = [];
@@ -16,43 +17,39 @@ function getRequestBodyBuffer(req: Request): Promise<Buffer> {
     });
 }
 
-
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'reports');
 if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-async function getCpiAuthToken(tokenUrl: string, clientId: string, clientSecret: string): Promise<string> {
-    const params = new URLSearchParams();
-    params.append('grant_type', 'client_credentials');
-    params.append('client_id', clientId);
-    params.append('client_secret', clientSecret);
-    try {
-        const response = await axios.post(tokenUrl, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-        return response.data.access_token;
-    } catch (error) {
-        console.error('--- [Auth Error] Failed to fetch CPI OAuth token:', error);
-        throw new Error('Failed to authenticate with CPI.');
-    }
-}
-
 async function callCpiIFlow(payload: any) {
-    const iFlowUrl = process.env.CPI_IFLOW_URL;
-    const tokenUrl = process.env.CPI_TOKEN_URL;
-    const clientId = process.env.CPI_CLIENT_ID;
-    const clientSecret = process.env.CPI_CLIENT_SECRET;
-
-    if (!iFlowUrl || !tokenUrl || !clientId || !clientSecret) {
-        throw new Error('CPI connection details are not configured in environment variables.');
+    console.log('--- [CPI LOG] Attempting to get destination "CPI_Google Search_iFlow"...');
+    const destination = await getDestination({ destinationName: 'CPI_Google_Search_iFlow_Bank' });
+    if (!destination) {
+        throw new Error('BTP Destination "CPI_Google_Search_iFlow_Bank" not found.');
     }
+    console.log('--- [CPI LOG] Successfully retrieved destination.');
 
-    const accessToken = await getCpiAuthToken(tokenUrl, clientId, clientSecret);
-    const response = await axios.post(iFlowUrl, payload, {
-        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    const iFlowEndpoint = destination.url + '/http/https/GoogleSearchJob';
+    
+    console.log(`--- [CPI LOG] Sending ${payload.keywords.length} items to CPI endpoint: ${iFlowEndpoint}`);
+    
+    const response = await axios.post(iFlowEndpoint, payload, {
+        headers: {
+            'Authorization': `Bearer ${destination.authTokens[0].value}`,
+            'Content-Type': 'application/json'
+        },
         responseType: 'arraybuffer'
     });
+
+    console.log(`--- [CPI LOG] Received response from CPI. Status: ${response.status}`);
+    console.log(`--- [CPI LOG] Response Headers:`, JSON.stringify(response.headers, null, 2));
+    console.log(`--- [CPI LOG] Response data type: ${typeof response.data}`);
+    console.log(`--- [CPI LOG] Response data length (bytes): ${response.data ? response.data.length : 'N/A'}`);
+
     return response.data;
 }
+
 
 async function parseFileBuffer(buffer: Buffer): Promise<{ keyword: string; excludedDomains: string; }[]> {
     let parsedData: { keyword: string; excludedDomains: string; }[] = [];
@@ -116,7 +113,10 @@ async function handleFileUpload(req: Request, res: Response) {
         console.log(`--- [DB LOG] Successfully created SearchRun with ID: ${runID}`);
 
         const excelBuffer = await callCpiIFlow({ keywords: parsedData });
-        console.log('--- [SERVER LOG] Successfully received Excel file from CPI.');
+
+        if (!excelBuffer || excelBuffer.length < 100) {
+             throw new Error(`Received an invalid or empty buffer from CPI. Size: ${excelBuffer ? excelBuffer.length : 0} bytes.`);
+        }
 
         const timestamp = new Date().toISOString().replace(/:/g, '-');
         const fileName = `Report-${runID}-${timestamp}.xlsx`;
@@ -132,7 +132,8 @@ async function handleFileUpload(req: Request, res: Response) {
         console.log(`--- [DB LOG] Successfully updated SearchRun ${runID} to 'Success'.`);
 
         await tx.commit();
-
+        console.log(`--- [DB LOG] Transaction committed for SearchRun ID: ${runID}.`);
+        
         return res.status(200).json({
             message: `Successfully processed ${parsedData.length} keywords.`,
             downloadUrl: `/rest/download/${fileName}`
@@ -140,8 +141,8 @@ async function handleFileUpload(req: Request, res: Response) {
 
     } catch (error: any) {
         console.error('--- [FATAL UPLOAD ERROR] ---', error.message);
-        if (tx.isDraft) await tx.rollback();
-
+        await tx.rollback();
+        
         if (runID) {
             console.log(`--- [DB LOG] Transaction rolled back for run ID: ${runID}.`);
         }

@@ -35,11 +35,11 @@
         "kind": "dummy"
       },
       "db": {
-      "kind": "sqlite",
-      "credentials": {
-        "database": "db.sqlite" 
-      }
-    },
+        "kind": "sqlite",
+        "credentials": {
+          "database": "db.sqlite"
+        }
+      },
       "CPI_Google Search_iFlow": {
         "kind": "rest",
         "credentials": {

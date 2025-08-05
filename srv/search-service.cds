@@ -1,14 +1,10 @@
 using { com.sap.search as my } from '../db/data-model';
 
+@(requires: 'authenticated-user')
 service SearchService {
 
-    // --- ADD THIS ANNOTATION TO GRANT READ ACCESS ---
-    @(restrict: [
-        { grant: 'READ', to: 'authenticated-user' }
-    ])
     @readonly
     entity SearchRuns as projection on my.SearchRun;
-    // --- END OF CHANGE ---
 
     type SearchResult {
         title   : String;
@@ -29,4 +25,5 @@ service SearchService {
     action saveKeywords(keywords: array of KeywordEntry);
 
     entity SearchTerms as projection on my.SearchTerm;
+
 }

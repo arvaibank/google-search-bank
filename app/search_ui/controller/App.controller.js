@@ -34,7 +34,7 @@ sap.ui.define([
                 return;
             }
 
-            oFileUploader.removeAllHeaderParameters(); 
+            oFileUploader.removeAllHeaderParameters();
             var sFileName = oFileUploader.getValue();
             var oHeaderParameter = new FileUploaderParameter({
                 name: "x-filename",
@@ -67,7 +67,7 @@ sap.ui.define([
                                 new Link({
                                     text: "Click here to download your report",
                                     href: oData.downloadUrl,
-                                    target: "_blank", 
+                                    target: "_blank",
                                     class: "sapUiSmallMarginTop"
                                 })
                             ]
