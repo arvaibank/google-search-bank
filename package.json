@@ -32,7 +32,7 @@
   "cds": {
     "requires": {
       "auth": {
-        "kind": "xsuaa"
+        "kind": "dummy"
       },
       "db": {
         "kind": "sqlite",
