@@ -1,6 +1,6 @@
 using { com.sap.search as my } from '../db/data-model';
 
-@(restrict: [{ grant: '*', to: '*' }])
+//@(requires: 'authenticated-user')
 service SearchService {
 
     @readonly
