@@ -1,6 +1,19 @@
 {
+  "xsappname": "google-search-bank-app",
+  "tenant-mode": "dedicated",
   "scopes": [],
   "attributes": [],
   "role-templates": [],
-  "authorities-inheritance": false
+  "authorities-inheritance": false,
+  "oauth2-configuration": {
+    "grant-types": [
+      "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      "authorization_code"
+    ],
+    "redirect-uris": [
+      "http://localhost:*/login/callback",
+      "https://*.applicationstudio.cloud.sap/login/callback",
+      "https://*.cfapps.us10-001.hana.ondemand.com/login/callback"
+    ]
+  }
 }

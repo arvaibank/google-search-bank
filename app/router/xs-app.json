@@ -13,7 +13,8 @@
       "source": "^/rest/(.*)$",
       "target": "/rest/$1",
       "destination": "srv-api",
-      "authenticationType": "xsuaa"
+      "authenticationType": "xsuaa",
+      "csrfProtection": true
     },
     {
       "source": "^/(.*)$",
