@@ -6,8 +6,6 @@ service SearchService {
     @readonly
     entity SearchRuns as projection on my.SearchRun;
 
-    entity TestData as projection on my.TestData;
-
     type SearchResult {
         title   : String;
         link    : String;
