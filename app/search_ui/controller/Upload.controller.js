@@ -17,35 +17,42 @@ sap.ui.define([
         },
 
         onFileChange: function(oEvent) {
-            this.byId("fileUploader").setEnabled(true);
             this.byId("uploadButton").setEnabled(true);
         },
 
         onUploadPress: function () {
-            var oFileUploader = this.byId("fileUploader");
-            if (!oFileUploader.getValue()) {
+            const oFileUploader = this.byId("fileUploader");
+            const sFileName = oFileUploader.getValue();
+
+            if (!sFileName) {
                 MessageBox.error("Please choose a file first.");
                 return;
             }
-            
+
+            // Set header parameter right before upload
             oFileUploader.removeAllHeaderParameters();
-            var sFileName = oFileUploader.getValue();
-            var oHeaderParameter = new FileUploaderParameter({ name: "x-filename", value: sFileName });
+            const oHeaderParameter = new FileUploaderParameter({
+                name: "x-filename",
+                value: encodeURIComponent(sFileName)
+            });
             oFileUploader.addHeaderParameter(oHeaderParameter);
 
-            oFileUploader.setEnabled(false);
+            // Disable the button immediately to prevent double-clicks
             this.byId("uploadButton").setEnabled(false);
             
+            // Start the upload
             oFileUploader.upload();
         },
 
         onUploadComplete: function(oEvent) {
-            var oFileUploader = this.byId("fileUploader");
-            var sResponse = oEvent.getParameter("responseRaw");
-            var iStatus = oEvent.getParameter("status");
+            const oFileUploader = this.byId("fileUploader");
+            const sResponse = oEvent.getParameter("responseRaw");
+            const iStatus = oEvent.getParameter("status");
 
+            // CRITICAL: Always clear the uploader and re-enable the button
+            // This ensures the UI is reset after success or failure.
             oFileUploader.clear();
-            oFileUploader.setEnabled(true);
+            this.byId("uploadButton").setEnabled(true);
 
             if (iStatus === 200 && sResponse) { 
                 try {
@@ -61,8 +68,7 @@ sap.ui.define([
                                 new Link({
                                     text: "Click here to download your report",
                                     href: oData.downloadUrl,
-                                    target: "_blank",
-                                    class: "sapUiSmallMarginTop"
+                                    target: "_blank"
                                 })
                             ]
                         }),
@@ -82,6 +88,7 @@ sap.ui.define([
                      MessageBox.error("An error occurred while parsing the server response.");
                 }
             } else {
+                // This now correctly handles any backend failure.
                 MessageBox.error("File upload failed.\n\nStatus: " + iStatus + "\nResponse: " + sResponse);
             }
         }

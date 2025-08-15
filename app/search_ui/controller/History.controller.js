@@ -1,9 +1,12 @@
 sap.ui.define([
-    "sap/ui/core/mvc/Controller"
-], function (Controller) {
+    "sap/ui/core/mvc/Controller",
+    "./formatter"
+], function (Controller, formatter) {
     "use strict";
     return Controller.extend("com.sap.searchui.controller.History", {
         
+        formatter: formatter,
+
         onInit: function () {
             var oRouter = this.getOwnerComponent().getRouter();
             oRouter.getRoute("History").attachPatternMatched(this._onObjectMatched, this);

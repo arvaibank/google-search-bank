@@ -7,7 +7,11 @@
             <Table
                 id="historyTable"
                 inset="false"
-                items="{/SearchRuns}">
+                items="{
+                    path: '/SearchRuns',
+                    sorter: { path: 'createdAt', descending: true },
+                    parameters: { $expand: 'terms' } 
+                }">
                 <headerToolbar>
                     <Toolbar>
                         <Title text="Past Keyword Analysis Runs"/>
@@ -17,24 +21,52 @@
                 </headerToolbar>
                 <columns>
                     <Column><Text text="File Name"/></Column>
-                    <Column><Text text="Keywords"/></Column>
-                    <Column><Text text="Status"/></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Keywords"/></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Runtime"/></Column>
+                    <Column minScreenWidth="Desktop" demandPopin="true"><Text text="Status"/></Column>
                     <Column><Text text="Run Date"/></Column>
                     <Column><Text text="Report"/></Column>
                 </columns>
                 <items>
-                    <ColumnListItem vAlign="Middle">
+                    <ColumnListItem vAlign="Middle" type="Navigation">
                         <cells>
                             <Text text="{fileName}"/>
                             <Text text="{keywordCount}"/>
+                            <Text text="{= ${runtimeInSeconds} + ' seconds'}"/>
                             <ObjectStatus
                                 text="{status}"
                                 state="{= ${status} === 'Success' ? 'Success' : ${status} === 'Failed' ? 'Error' : 'Warning' }"/>
-                            <Text text="{path: 'createdAt', type: 'sap.ui.model.type.DateTime', formatOptions: { style: 'medium' }}"/>
-                            <Link text="Download" href="{reportUrl}" visible="{= !!${reportUrl} }"/>
+                            <Text text="{
+                                path: 'createdAt',
+                                formatter: '.formatter.formatDateTime'
+                            }"/>
+                            <Link 
+                                text="Download" 
+                                href="{reportUrl}" 
+                                visible="{
+                                    path: 'reportUrl',
+                                    formatter: '.formatter.isReportVisible'
+                                }"
+                                target="_blank"
+                            />
                         </cells>
                     </ColumnListItem>
                 </items>
+                 <dependents>
+                    <Panel expandable="true" expanded="false" width="auto" class="sapUiNoContentPadding">
+                        <headerToolbar>
+                            <Toolbar>
+                                <Title text="Processed Keywords"/>
+                            </Toolbar>
+                        </headerToolbar>
+                        <content>
+                            <List
+                                items="{terms}">
+                                <StandardListItem title="{keyword}" description="Excluded: {= ${excludedDomains} || 'None'}"/>
+                            </List>
+                        </content>
+                    </Panel>
+                </dependents>
             </Table>
         </content>
     </Page>

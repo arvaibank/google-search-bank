@@ -23,31 +23,36 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 }
 
 async function callCpiIFlow(payload: any) {
-    console.log('--- [CPI LOG] Attempting to get destination "CPI_Google Search_iFlow"...');
-    const destination = await getDestination({ destinationName: 'CPI_Google_Search_iFlow_Bank' });
-    if (!destination) {
-        throw new Error('BTP Destination "CPI_Google_Search_iFlow_Bank" not found.');
+    console.log('--- [CPI LOG] Attempting to get destination "CPI_Google_Search_iFlow_Bank"...');
+    try {
+        const destination = await getDestination({ destinationName: 'CPI_Google_Search_iFlow_Bank' });
+        if (!destination) {
+            throw new Error('BTP Destination "CPI_Google_Search_iFlow_Bank" not found.');
+        }
+        console.log('--- [CPI LOG] Successfully retrieved destination:', destination);
+
+        const iFlowEndpoint = destination.url + '/http/https/GoogleSearchJob';
+        
+        console.log(`--- [CPI LOG] Sending ${payload.keywords.length} items to CPI endpoint: ${iFlowEndpoint}`);
+        
+        const response = await axios.post(iFlowEndpoint, payload, {
+            headers: {
+                'Authorization': `Bearer ${destination.authTokens[0].value}`,
+                'Content-Type': 'application/json'
+            },
+            responseType: 'arraybuffer'
+        });
+
+        console.log(`--- [CPI LOG] Received response from CPI. Status: ${response.status}`);
+        return response.data;
+    } catch (error: any) {
+        console.error('--- [CPI ERROR] Error calling CPI iFlow:', error.message);
+        if (error.response) {
+            console.error('--- [CPI ERROR] Response Status:', error.response.status);
+            console.error('--- [CPI ERROR] Response Data:', error.response.data.toString());
+        }
+        throw new Error('Failed to communicate with the CPI iFlow.');
     }
-    console.log('--- [CPI LOG] Successfully retrieved destination.');
-
-    const iFlowEndpoint = destination.url + '/http/https/GoogleSearchJob';
-    
-    console.log(`--- [CPI LOG] Sending ${payload.keywords.length} items to CPI endpoint: ${iFlowEndpoint}`);
-    
-    const response = await axios.post(iFlowEndpoint, payload, {
-        headers: {
-            'Authorization': `Bearer ${destination.authTokens[0].value}`,
-            'Content-Type': 'application/json'
-        },
-        responseType: 'arraybuffer'
-    });
-
-    console.log(`--- [CPI LOG] Received response from CPI. Status: ${response.status}`);
-    console.log(`--- [CPI LOG] Response Headers:`, JSON.stringify(response.headers, null, 2));
-    console.log(`--- [CPI LOG] Response data type: ${typeof response.data}`);
-    console.log(`--- [CPI LOG] Response data length (bytes): ${response.data ? response.data.length : 'N/A'}`);
-
-    return response.data;
 }
 
 
@@ -88,7 +93,7 @@ async function handleFileUpload(req: Request, res: Response) {
     console.log('--- [SERVER LOG] File upload request received.');
     
     const tx = cds.tx();
-    const { SearchRun } = cds.entities('com.sap.search');
+    const { SearchRun, SearchTerm } = cds.entities('com.sap.search');
     let runID: string | null = null;
 
     try {
@@ -101,18 +106,30 @@ async function handleFileUpload(req: Request, res: Response) {
         
         const newRunID = cds.utils.uuid();
         runID = newRunID;
+
+        const termsToInsert = parsedData.map(term => ({
+            ID: cds.utils.uuid(),
+            keyword: term.keyword,
+            excludedDomains: term.excludedDomains,
+            run_ID: runID
+        }));
         
         await tx.run(
             INSERT.into(SearchRun).entries({
                 ID: runID,
                 fileName: req.headers['x-filename'] as string || 'unknown.xlsx',
                 keywordCount: parsedData.length,
-                status: 'Processing'
+                status: 'Processing',
+                terms: termsToInsert 
             })
         );
         console.log(`--- [DB LOG] Successfully created SearchRun with ID: ${runID}`);
 
+        const startTime = Date.now();
         const excelBuffer = await callCpiIFlow({ keywords: parsedData });
+        const endTime = Date.now();
+        const runtimeInSeconds = Math.round((endTime - startTime) / 1000);
+        console.log(`--- [METRICS] CPI iFlow execution time: ${runtimeInSeconds} seconds.`);
 
         if (!excelBuffer || excelBuffer.length < 100) {
              throw new Error(`Received an invalid or empty buffer from CPI. Size: ${excelBuffer ? excelBuffer.length : 0} bytes.`);
@@ -126,7 +143,8 @@ async function handleFileUpload(req: Request, res: Response) {
         await tx.run(
             UPDATE(SearchRun, runID).with({
                 status: 'Success',
-                reportUrl: `/rest/download/${fileName}`
+                reportUrl: `/rest/download/${fileName}`,
+                runtimeInSeconds: runtimeInSeconds
             })
         );
         console.log(`--- [DB LOG] Successfully updated SearchRun ${runID} to 'Success'.`);
@@ -145,6 +163,7 @@ async function handleFileUpload(req: Request, res: Response) {
         
         if (runID) {
             console.log(`--- [DB LOG] Transaction rolled back for run ID: ${runID}.`);
+            await UPDATE(SearchRun, runID).with({ status: 'Failed', runtimeInSeconds: 0 });
         }
         return res.status(500).send(`An error occurred: ${error.message}`);
     }

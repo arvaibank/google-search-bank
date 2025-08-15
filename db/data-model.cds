@@ -8,12 +8,13 @@ entity SearchRun : cuid, managed {
     keywordCount    : Integer;
     status          : String(20) default 'Processing';
     reportUrl       : String;
+    runtimeInSeconds: Integer;
+    terms           : Composition of many SearchTerm on terms.run = $self;
 }
 
-entity SearchTerm : cuid, managed {
+entity SearchTerm : cuid {
     key ID              : UUID;
     keyword         : String(255) not null;
     excludedDomains : String(1000);
-    status          : String(20) default 'Pending';
     run             : Association to SearchRun;
 }

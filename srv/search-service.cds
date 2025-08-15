@@ -4,7 +4,10 @@ using { com.sap.search as my } from '../db/data-model';
 service SearchService {
 
     @readonly
-    entity SearchRuns as projection on my.SearchRun;
+    entity SearchRuns as projection on my.SearchRun {
+        *,
+        terms: redirected to my.SearchTerm
+    };
 
     type SearchResult {
         title   : String;
@@ -24,5 +27,5 @@ service SearchService {
     
     action saveKeywords(keywords: array of KeywordEntry);
 
-    entity SearchTerms as projection on my.SearchTerm;
+    //entity SearchTerms as projection on my.SearchTerm;
 }
